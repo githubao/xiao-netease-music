@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import time
 from music_163 import sql
 import logging
-from threadpool import threadpool
+from xconcurrent import threadpool
 import threading
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -60,7 +60,8 @@ class MultiAlbum(threadpool.MultiRun):
 
 
 def multi_scrap_album():
-    artists = sql.get_all_artist()
+    # artists = sql.get_all_artist()
+    artists = read_from_file()
 
     # 去重
     artists = set(item['ARTIST_ID'] for item in artists)
@@ -73,7 +74,8 @@ def multi_scrap_album():
 
 
 def scrap_album():
-    artists = sql.get_all_artist()
+    # artists = sql.get_all_artist()
+    artists = read_from_file()
     my_album = Album()
 
     # 去重
@@ -92,6 +94,11 @@ def scrap_album():
 
         if idx % 100 == 0:
             logger.info('process cnt: {}'.format(idx))
+
+
+def read_from_file():
+    with open('222.log', 'r', encoding='utf-8') as f:
+        return [{'ARTIST_ID': int(line.strip())} for line in f]
 
 
 def hello():

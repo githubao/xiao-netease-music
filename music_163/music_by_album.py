@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 from music_163 import sql
+from xconcurrent import threadpool
 
 
 class Music(object):
@@ -41,14 +42,26 @@ class Music(object):
             sql.insert_music(music_id, music_name, album_id)
 
 
-if __name__ == '__main__':
-    albums = sql.get_all_album()
+class MultiMusic(threadpool.MultiRun):
     my_music = Music()
-    for i in albums:
-        try:
-            my_music.save_music(i['ALBUM_ID'])
-            # print(i)
-        except Exception as e:
-            # 打印错误日志
-            print(str(i) + ': ' + str(e))
-            time.sleep(5)
+
+    def run_one(self, dic):
+        self.my_music.save_music(dic['id'])
+        return dic
+
+
+def multi_scrap_music():
+    albums = sql.get_all_album()
+
+    # 去重
+    albums = set(item['ALBUM_ID'] for item in albums)
+    print('album len: {}'.format(len(albums)))
+
+    tasks = [{"id": item} for item in albums]
+
+    multi = MultiMusic(tasks)
+    multi.run_many()
+
+
+if __name__ == '__main__':
+    multi_scrap_music()

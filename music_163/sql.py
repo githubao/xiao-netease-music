@@ -11,7 +11,6 @@ connection = pymysql.connect(host='localhost',
                              charset='utf8mb4',
                              cursorclass=pymysql.cursors.DictCursor)
 
-
 config = {
     'pool_name': 'hello',
     'host': 'localhost',
@@ -21,24 +20,31 @@ config = {
     'database': 'netease'
 }
 
-
 pool = MySQLConnectionPool(**config)
 
 
 # 保存评论
-def insert_comments(music_id, comments, detail, connection0):
-    with connection0.cursor() as cursor:
-        sql = "INSERT INTO `comments` (`MUSIC_ID`, `COMMENTS`, `DETAILS`) VALUES (%s, %s, %s)"
-        cursor.execute(sql, (music_id, comments, detail))
-    connection0.commit()
+def insert_comments(music_id, comment_cnt):
+    conn = pool.borrow_connection()
+
+    with conn.cursor() as cursor:
+        sql = "INSERT INTO `comments` (`MUSIC_ID`, `COMMENT_CNT`) VALUES (%s, %s)"
+        cursor.execute(sql, (music_id, comment_cnt))
+    conn.commit()
+
+    pool.return_connection(conn)
 
 
 # 保存音乐
 def insert_music(music_id, music_name, album_id):
-    with connection.cursor() as cursor:
+    conn = pool.borrow_connection()
+
+    with conn.cursor() as cursor:
         sql = "INSERT INTO `musics` (`MUSIC_ID`, `MUSIC_NAME`, `ALBUM_ID`) VALUES (%s, %s, %s)"
         cursor.execute(sql, (music_id, music_name, album_id))
-    connection.commit()
+    conn.commit()
+
+    pool.return_connection(conn)
 
 
 # 保存专辑
@@ -73,8 +79,8 @@ def insert_artist(artist_id, artist_name):
 # 获取所有歌手的 ID
 def get_all_artist():
     with connection.cursor() as cursor:
-        # sql = "SELECT `ARTIST_ID` FROM `artists` ORDER BY ARTIST_ID"
-        sql = "SELECT `ARTIST_ID` FROM `artists` ORDER BY RAND() limit 50"
+        sql = "SELECT `ARTIST_ID` FROM `artists` ORDER BY ARTIST_ID"
+        # sql = "SELECT `ARTIST_ID` FROM `artists` ORDER BY RAND() limit 50"
         cursor.execute(sql, ())
         return cursor.fetchall()
 
@@ -83,6 +89,7 @@ def get_all_artist():
 def get_all_album():
     with connection.cursor() as cursor:
         sql = "SELECT `ALBUM_ID` FROM `albums` ORDER BY ALBUM_ID"
+        # sql = "SELECT `ALBUM_ID` FROM `albums` ORDER BY RAND() limit 200"
         cursor.execute(sql, ())
         return cursor.fetchall()
 
@@ -90,7 +97,8 @@ def get_all_album():
 # 获取所有音乐的 ID
 def get_all_music():
     with connection.cursor() as cursor:
-        sql = "SELECT `MUSIC_ID` FROM `musics` ORDER BY MUSIC_ID"
+        # sql = "SELECT `MUSIC_ID` FROM `musics` ORDER BY MUSIC_ID"
+        sql = "SELECT `MUSIC_ID` FROM `musics` ORDER BY RAND() LIMIT 100"
         cursor.execute(sql, ())
         return cursor.fetchall()
 

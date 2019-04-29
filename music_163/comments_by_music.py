@@ -5,11 +5,11 @@
 import requests
 from music_163 import sql
 import time
-import threading
-import pymysql.cursors
+from bs4 import BeautifulSoup
+from xconcurrent import threadpool
 
 
-class Comments(object):
+class Comment(object):
     headers = {
         'Host': 'music.163.com',
         'Connection': 'keep-alive',
@@ -34,56 +34,47 @@ class Comments(object):
         'encSecKey': '8c85d1b6f53bfebaf5258d171f3526c06980cbcaf490d759eac82145ee27198297c152dd95e7ea0f08cfb7281588cdab305946e01b9d84f0b49700f9c2eb6eeced8624b16ce378bccd24341b1b5ad3d84ebd707dbbd18a4f01c2a007cd47de32f28ca395c9715afa134ed9ee321caa7f28ec82b94307d75144f6b5b134a9ce1a'
     }
 
-    proxies = {'http': 'http://127.0.0.1:10800'}
-
-    def get_comments(self, music_id, flag):
+    def save_comment(self, music_id):
         self.headers['Referer'] = 'http://music.163.com/playlist?id=' + str(music_id)
-        if flag:
-            r = requests.post('http://music.163.com/weapi/v1/resource/comments/R_SO_4_' + str(music_id),
-                              headers=self.headers, params=self.params, data=self.data, proxies=self.proxies)
-        else:
-            r = requests.post('http://music.163.com/weapi/v1/resource/comments/R_SO_4_' + str(music_id),
-                              headers=self.headers, params=self.params, data=self.data)
-        return r.json()
+
+        r = requests.post('http://music.163.com/weapi/v1/resource/comments/R_SO_4_' + str(music_id),
+                          headers=self.headers, params=self.params, data=self.data)
+        resp = r.json()
+
+        sql.insert_comments(music_id, resp['total'])
+
+    def build_comments(self, dic):
+        comments = dic.get('hotComments', [])
+        return [item['content'] for item in comments]
+
+
+class MultiComment(threadpool.MultiRun):
+    my_comment = Comment()
+
+    def run_one(self, dic):
+        self.my_comment.save_comment(dic['id'])
+        return dic
+
+
+def multi_scrap_comment():
+    musics = sql.get_all_music()
+
+    # 去重
+    musics = set(item['MUSIC_ID'] for item in musics)
+    print('music len: {}'.format(len(musics)))
+
+    tasks = [{"id": item} for item in musics]
+
+    multi = MultiComment(tasks)
+    multi.run_many()
+
+
+def hello_comment():
+    my_comment = Comment()
+
+    my_comment.save_comment(440208476)
 
 
 if __name__ == '__main__':
-    my_comment = Comments()
-
-
-    def save_comments(musics, flag, connection0):
-        for i in musics:
-            my_music_id = i['MUSIC_ID']
-            try:
-                comments = my_comment.get_comments(my_music_id, flag)
-                if comments['total'] > 0:
-                    sql.insert_comments(my_music_id, comments['total'], str(comments), connection0)
-            except Exception as e:
-                # 打印错误日志
-                print(my_music_id)
-                print(e)
-                time.sleep(5)
-
-
-    music_before = sql.get_before_music()
-    music_after = sql.get_after_music()
-
-    # pymysql 链接不是线程安全的
-    connection1 = pymysql.connect(host='localhost',
-                                  user='root',
-                                  password='1234',
-                                  db='test',
-                                  charset='utf8mb4',
-                                  cursorclass=pymysql.cursors.DictCursor)
-
-    connection2 = pymysql.connect(host='localhost',
-                                  user='root',
-                                  password='1234',
-                                  db='test',
-                                  charset='utf8mb4',
-                                  cursorclass=pymysql.cursors.DictCursor)
-
-    t1 = threading.Thread(target=save_comments, args=(music_before, True, connection1))
-    t2 = threading.Thread(target=save_comments, args=(music_after, False, connection2))
-    t1.start()
-    t2.start()
+    # multi_scrap_comment()
+    hello_comment()

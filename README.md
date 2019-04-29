@@ -10,11 +10,15 @@ copy from: https://github.com/RitterHou/music-163
 ### 以下为主要思路
 1. 爬取所有的歌手信息（[artists.py](music_163/artists.py)）；
 2. 根据上一步爬取到的歌手信息去爬取所有的专辑信息（[album_by_artist.py](music_163/album_by_artist.py)）；
-3. 根据专辑信息爬取所有的歌曲信息（[music_by _album.py](music_163/music_by_album.py)）；
-4. 根据歌曲信息爬取其评论条数（[comments_by _music.py](music_163/comments_by_music.py)）
+3. 根据专辑信息爬取所有的歌曲信息（[music_by_album.py](music_163/music_by_album.py)）；
+4. 根据歌曲信息爬取其评论条数（[comments_by_music.py](music_163/comments_by_music.py)）
 5. 数据库相关的语句都存放于（[sql.py](music_163/sql.py)）中。
 
 
 ### 数据总数
-1. artists.py: 一共39092个歌手，去重之后有35069个歌手
-1. album_by_artist.py: 一共张专辑，去重之后有张专辑
+1. artists.py: 去重之后有35069个歌手
+http://music.163.com/discover/artist/cat?id=1001&initial=69
+1. album_by_artist.py: 去重之后有370155张专辑
+http://music.163.com/artist/album?id=1047211
+1. music_by_album.py: 去重之后有首歌曲
+http://music.163.com/album?id=1533948

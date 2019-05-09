@@ -103,6 +103,20 @@ def get_all_music():
         return cursor.fetchall()
 
 
+# 获取部分
+def get_batch_music(limit, offset):
+    with connection.cursor() as cursor:
+        # sql = "SELECT `MUSIC_ID` FROM `musics` LIMIT {} OFFSET {}".format(limit, offset)
+        sql = "SELECT `MUSIC_ID` FROM `musics` inner join " \
+              "( select id from `musics` LIMIT {},{}) b using (id)".format(offset, limit)
+
+        # sql = "SELECT t.MUSIC_ID FROM ( SELECT  id FROM musics ORDER BY id LIMIT {}, {}) q " \
+        #       "JOIN musics t ON t.id = q.id".format(offset, limit)
+
+        cursor.execute(sql, ())
+        return cursor.fetchall()
+
+
 # 获取前一半音乐的 ID
 def get_before_music():
     with connection.cursor() as cursor:

@@ -4,9 +4,9 @@
 
 import requests
 from music_163 import sql
-import time
-from bs4 import BeautifulSoup
 from xconcurrent import threadpool
+import sys
+import logging
 
 
 class Comment(object):
@@ -56,17 +56,38 @@ class MultiComment(threadpool.MultiRun):
         return dic
 
 
-def multi_scrap_comment():
-    musics = sql.get_all_music()
+def multi_scrap_comment(batch_musics):
+    # musics = sql.get_all_music()
 
     # 去重
-    musics = set(item['MUSIC_ID'] for item in musics)
+    musics = set(item['MUSIC_ID'] for item in batch_musics)
     print('music len: {}'.format(len(musics)))
 
     tasks = [{"id": item} for item in musics]
 
     multi = MultiComment(tasks)
     multi.run_many()
+
+
+def write_total(batch_musics):
+    filename = '/Users/baoqiang/Downloads/music.txt'
+
+    musics = set(item['MUSIC_ID'] for item in batch_musics)
+
+    with open(filename, 'a', encoding="utf-8") as fw:
+        for music in musics:
+            fw.write('{}\n'.format(music))
+
+
+def batch_multi_scrap_comment():
+    total = 2856051
+    batch_size = 1000
+
+    for i in range(0, total, batch_size):
+        logging.info('process cnt: {}'.format(i))
+        rows = sql.get_batch_music(batch_size, i)
+        multi_scrap_comment(rows)
+        # write_total(rows)
 
 
 def hello_comment():
@@ -76,5 +97,5 @@ def hello_comment():
 
 
 if __name__ == '__main__':
-    # multi_scrap_comment()
-    hello_comment()
+    batch_multi_scrap_comment()
+    # hello_comment()

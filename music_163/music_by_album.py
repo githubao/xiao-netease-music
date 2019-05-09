@@ -51,7 +51,8 @@ class MultiMusic(threadpool.MultiRun):
 
 
 def multi_scrap_music():
-    albums = sql.get_all_album()
+    # albums = sql.get_all_album()
+    albums = get_album_from_file()
 
     # 去重
     albums = set(item['ALBUM_ID'] for item in albums)
@@ -61,6 +62,11 @@ def multi_scrap_music():
 
     multi = MultiMusic(tasks)
     multi.run_many()
+
+
+def get_album_from_file():
+    with open('333.log', 'r', encoding='utf-8') as f:
+        return [{'ALBUM_ID': int(line.strip())} for line in f]
 
 
 if __name__ == '__main__':

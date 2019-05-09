@@ -7,22 +7,28 @@ from music_163 import sql
 from xconcurrent import threadpool
 import sys
 import logging
+from music_163 import random_proxy
+import datetime
+import time
+import random
+
+TRY_TIME = 10
 
 
 class Comment(object):
     headers = {
         'Host': 'music.163.com',
-        'Connection': 'keep-alive',
-        'Content-Length': '484',
-        'Cache-Control': 'max-age=0',
-        'Origin': 'http://music.163.com',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': '*/*',
-        'DNT': '1',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'zh-CN,zh;q=0.8,en;q=0.6,zh-TW;q=0.4',
-        'Cookie': 'JSESSIONID-WYYY=b66d89ed74ae9e94ead89b16e475556e763dd34f95e6ca357d06830a210abc7b685e82318b9d1d5b52ac4f4b9a55024c7a34024fddaee852404ed410933db994dcc0e398f61e670bfeea81105cbe098294e39ac566e1d5aa7232df741870ba1fe96e5cede8372ca587275d35c1a5d1b23a11e274a4c249afba03e20fa2dafb7a16eebdf6%3A1476373826753; _iuqxldmzr_=25; _ntes_nnid=7fa73e96706f26f3ada99abba6c4a6b2,1476372027128; _ntes_nuid=7fa73e96706f26f3ada99abba6c4a6b2; __utma=94650624.748605760.1476372027.1476372027.1476372027.1; __utmb=94650624.4.10.1476372027; __utmc=94650624; __utmz=94650624.1476372027.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)',
+        # 'Connection': 'keep-alive',
+        # 'Content-Length': '484',
+        # 'Cache-Control': 'max-age=0',
+        # 'Origin': 'http://music.163.com',
+        # 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36',
+        # 'Content-Type': 'application/x-www-form-urlencoded',
+        # 'Accept': '*/*',
+        # 'DNT': '1',
+        # 'Accept-Encoding': 'gzip, deflate',
+        # 'Accept-Language': 'zh-CN,zh;q=0.8,en;q=0.6,zh-TW;q=0.4',
+        # 'Cookie': 'JSESSIONID-WYYY=b66d89ed74ae9e94ead89b16e475556e763dd34f95e6ca357d06830a210abc7b685e82318b9d1d5b52ac4f4b9a55024c7a34024fddaee852404ed410933db994dcc0e398f61e670bfeea81105cbe098294e39ac566e1d5aa7232df741870ba1fe96e5cede8372ca587275d35c1a5d1b23a11e274a4c249afba03e20fa2dafb7a16eebdf6%3A1476373826753; _iuqxldmzr_=25; _ntes_nnid=7fa73e96706f26f3ada99abba6c4a6b2,1476372027128; _ntes_nuid=7fa73e96706f26f3ada99abba6c4a6b2; __utma=94650624.748605760.1476372027.1476372027.1476372027.1; __utmb=94650624.4.10.1476372027; __utmc=94650624; __utmz=94650624.1476372027.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)',
     }
 
     params = {
@@ -35,13 +41,67 @@ class Comment(object):
     }
 
     def save_comment(self, music_id):
-        self.headers['Referer'] = 'http://music.163.com/playlist?id=' + str(music_id)
+        self.build_random_headers(music_id)
 
         r = requests.post('http://music.163.com/weapi/v1/resource/comments/R_SO_4_' + str(music_id),
                           headers=self.headers, params=self.params, data=self.data)
         resp = r.json()
 
-        sql.insert_comments(music_id, resp['total'])
+        # save data
+        if 'total' in resp:
+            sql.insert_comments(music_id, resp['total'])
+        else:
+            logging.error('spider [{}] failed: {}'.format(music_id, resp))
+            raise ValueError(music_id)
+
+    def build_random_headers(self, music_id):
+        self.headers['Referer'] = 'http://music.163.com/playlist?id=' + str(music_id)
+
+        # cookie_fmt = 'JSESSIONID-WYYY={sid}%3A{now}; _iuqxldmzr_=25; _ntes_nnid={nid},{now}; _ntes_nuid={nid}; __utma=94650624.748605760.1476372027.1476372027.1476372027.1; __utmb=94650624.4.10.1476372027; __utmc=94650624; __utmz=94650624.1476372027.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)'
+
+        # now = int(time.time() * 1000)
+        # sid = ua_mw.get_rand_sid()
+        # nid = ua_mw.get_rand_nid()
+
+        # self.headers['Cookie'] = cookie_fmt.format(now=now, sid=sid, nid=nid)
+        # self.headers['User-Agent'] = ua_mw.get_rand_ua()
+
+        # self.headers[
+        #     'Cookie'] = 'MUSIC_U=e954e2600e0c1ecfadbd06b365a3950f2fbcf4e9ffcf7e2733a8dda4202263671b4513c5c9ddb66f1b44c7a29488a6fff4ade6dff45127b3e9fc49f25c8de500d8f960110ee0022abf122d59fa1ed6a2'
+
+    def save_proxy_api_comment(self, music_id):
+        ok = False
+
+        for _ in range(TRY_TIME):
+            proxy = random_proxy.get_random_proxy()
+            try:
+                self.save_api_comment(music_id, proxy)
+                ok = True
+                break
+            except Exception as e:
+                continue
+
+        if not ok:
+            logging.error('spider id err: {}'.format(music_id))
+
+    def save_api_comment(self, music_id, proxy):
+        self.build_random_headers(music_id)
+
+        # logging.info("use header: {}".format(self.headers))
+
+        proxies = {
+            'http': proxy
+        }
+
+        r = requests.post('http://music.163.com/api/v1/resource/comments/R_SO_4_' + str(music_id),
+                          headers=self.headers, proxies=proxies, timeout=0.5)
+        resp = r.json()
+
+        if 'total' in resp:
+            sql.insert_comments(music_id, resp['total'])
+        else:
+            logging.error('spider [{}] failed: {}'.format(music_id, resp))
+            raise ValueError(music_id)
 
     def build_comments(self, dic):
         comments = dic.get('hotComments', [])
@@ -52,7 +112,7 @@ class MultiComment(threadpool.MultiRun):
     my_comment = Comment()
 
     def run_one(self, dic):
-        self.my_comment.save_comment(dic['id'])
+        self.my_comment.save_proxy_api_comment(dic['id'])
         return dic
 
 
@@ -81,7 +141,7 @@ def write_total(batch_musics):
 
 def batch_multi_scrap_comment():
     total = 2856051
-    batch_size = 1000
+    batch_size = 10000
 
     for i in range(0, total, batch_size):
         logging.info('process cnt: {}'.format(i))
@@ -93,7 +153,7 @@ def batch_multi_scrap_comment():
 def hello_comment():
     my_comment = Comment()
 
-    my_comment.save_comment(440208476)
+    my_comment.save_proxy_api_comment(440208476)
 
 
 if __name__ == '__main__':

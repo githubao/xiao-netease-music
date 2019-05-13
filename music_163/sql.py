@@ -28,8 +28,8 @@ def insert_comments(music_id, comment_cnt):
     conn = pool.borrow_connection()
 
     with conn.cursor() as cursor:
-        sql = "INSERT INTO `comments` (`MUSIC_ID`, `COMMENT_CNT`) VALUES (%s, %s)"
-        cursor.execute(sql, (music_id, comment_cnt))
+        sql = "INSERT INTO `comments` (`MUSIC_ID`, `COMMENT_CNT`) VALUES (%s, %s) ON DUPLICATE KEY UPDATE COMMENT_CNT = %s"
+        cursor.execute(sql, (music_id, comment_cnt, comment_cnt))
     conn.commit()
 
     pool.return_connection(conn)

@@ -11,6 +11,7 @@ from music_163 import random_proxy
 import datetime
 import time
 import random
+import os
 
 TRY_TIME = 10
 
@@ -39,6 +40,13 @@ class Comment(object):
         'params': 'Ak2s0LoP1GRJYqE3XxJUZVYK9uPEXSTttmAS+8uVLnYRoUt/Xgqdrt/13nr6OYhi75QSTlQ9FcZaWElIwE+oz9qXAu87t2DHj6Auu+2yBJDr+arG+irBbjIvKJGfjgBac+kSm2ePwf4rfuHSKVgQu1cYMdqFVnB+ojBsWopHcexbvLylDIMPulPljAWK6MR8',
         'encSecKey': '8c85d1b6f53bfebaf5258d171f3526c06980cbcaf490d759eac82145ee27198297c152dd95e7ea0f08cfb7281588cdab305946e01b9d84f0b49700f9c2eb6eeced8624b16ce378bccd24341b1b5ad3d84ebd707dbbd18a4f01c2a007cd47de32f28ca395c9715afa134ed9ee321caa7f28ec82b94307d75144f6b5b134a9ce1a'
     }
+
+    def __init__(self):
+        """
+        NOTICE: 这样子定义的变量才是成员变量
+        """
+        self.success = 0
+        self.failed = 0
 
     def save_comment(self, music_id):
         self.build_random_headers(music_id)
@@ -76,12 +84,14 @@ class Comment(object):
             proxy = random_proxy.get_random_proxy()
             try:
                 self.save_api_comment(music_id, proxy)
+                self.success += 1
                 ok = True
                 break
             except Exception as e:
                 continue
 
         if not ok:
+            self.failed += 1
             logging.error('spider id err: {}'.format(music_id))
 
     def save_api_comment(self, music_id, proxy):
@@ -109,11 +119,26 @@ class Comment(object):
 
 
 class MultiComment(threadpool.MultiRun):
-    my_comment = Comment()
+    def __init__(self, tasks):
+        super().__init__(tasks)
+        self.my_comment = Comment()
 
     def run_one(self, dic):
         self.my_comment.save_proxy_api_comment(dic['id'])
         return dic
+
+    def check_block(self):
+        """
+        查看有没有被封禁
+        :return:
+        """
+        ok = self.my_comment.success
+        fail = self.my_comment.failed
+
+        logging.info('success: {}, failed: {}'.format(ok, fail))
+        if fail / (ok + fail) > 0.5:
+            logging.error('ok/fail:{}/{}, blocked'.format(ok, fail))
+            sys.exit(-1)
 
 
 def multi_scrap_comment(batch_musics):
@@ -121,12 +146,14 @@ def multi_scrap_comment(batch_musics):
 
     # 去重
     musics = set(item['MUSIC_ID'] for item in batch_musics)
-    print('music len: {}'.format(len(musics)))
+    logging.info('music len: {}'.format(len(musics)))
 
     tasks = [{"id": item} for item in musics]
 
     multi = MultiComment(tasks)
     multi.run_many()
+
+    multi.check_block()
 
 
 def write_total(batch_musics):
@@ -150,6 +177,38 @@ def batch_multi_scrap_comment():
         # write_total(rows)
 
 
+def batch_file_multi_scrap_comment():
+    """
+    从文件里面读取数据
+    :return:
+    """
+
+    with open('/Users/baoqiang/Downloads/out.txt', 'r', encoding='utf-8') as f:
+        datas = [{'MUSIC_ID': int(line.strip())} for line in f]
+
+    batch_size = 5000
+    istep = len(datas) // batch_size
+    step = istep if len(datas) % batch_size == 0 else istep + 1
+    for i in range(0, step):
+        logging.info('process cnt: {}'.format(i * batch_size))
+        batches = datas[batch_size * i: batch_size * (i + 1)]
+        multi_scrap_comment(batches)
+        # write_total(batches)
+
+
+def batch_sample():
+    """
+    从文件里面读取数据
+    :return:
+    """
+    datas = list(range(1, 17))
+    batch_size = 3
+    istep = len(datas) // batch_size
+    step = istep if len(datas) % batch_size == 0 else istep + 1
+    for i in range(0, step):
+        print(datas[batch_size * i: batch_size * (i + 1)])
+
+
 def hello_comment():
     my_comment = Comment()
 
@@ -157,5 +216,6 @@ def hello_comment():
 
 
 if __name__ == '__main__':
-    batch_multi_scrap_comment()
+    # batch_multi_scrap_comment()
+    batch_file_multi_scrap_comment()
     # hello_comment()

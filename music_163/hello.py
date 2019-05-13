@@ -12,6 +12,28 @@ import requests
 from scrapy.selector import Selector
 
 
+class A:
+    other = 0
+
+    def __init__(self):
+        self.cnt = 0
+
+    def add(self):
+        self.cnt += 1
+        self.other += 1
+
+
+def static_var():
+    a1 = A()
+    a1.add()
+
+    a2 = A()
+    a2.add()
+
+    print(a2.cnt)
+    print(a2.other)
+
+
 def spider_comment():
     url = 'https://music.163.com/song?id=185709'
     resp = requests.get(url)
@@ -25,4 +47,5 @@ def spider_comment():
 
 
 if __name__ == '__main__':
-    spider_comment()
+    # spider_comment()
+    static_var()

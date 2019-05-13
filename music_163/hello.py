@@ -10,6 +10,8 @@
 
 import requests
 from scrapy.selector import Selector
+import logging
+from music_163 import random_proxy
 
 
 class A:
@@ -46,6 +48,45 @@ def spider_comment():
         print('not found')
 
 
+def spider_using_cookie():
+    # with open('cookies.txt', 'r', encoding='utf-8') as f:
+    #     for line in f:
+    #         line = line.strip()
+    #
+    #         headers = {
+    #             'Cookie': line
+    #         }
+
+    with open('proxies_ok.txt', 'r', encoding='utf-8') as g:
+        for gline in g:
+            proxies = {'http': gline.strip()}
+            try:
+                r = requests.post(url, headers={}, proxies=proxies, timeout=2)
+                print(r.json())
+            except Exception as e:
+                logging.error(e)
+
+
+url = 'http://music.163.com/api/v1/resource/comments/R_SO_4_440208476'
+
+
+def spider_using_cookie2():
+    # headers = {'Cookie': random_proxy.get_random_cookie()}
+    # proxies = {'http':random_proxy.get_random_proxy()}
+
+    # proxies = {'http': '123.58.9.79:8080'}
+
+    proxies = {}
+    headers = {}
+    # ip = random_proxy.get_random_ip()
+    # print(ip)
+    # headers = {'X-Real-IP': ip}
+
+    r = requests.post(url, headers=headers, proxies=proxies, timeout=2)
+    print(r.json())
+
+
 if __name__ == '__main__':
     # spider_comment()
-    static_var()
+    # static_var()
+    spider_using_cookie2()

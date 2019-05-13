@@ -12,8 +12,12 @@ import datetime
 import time
 import random
 import os
+from collections import defaultdict
 
-TRY_TIME = 10
+# TRY_TIME = 5
+TRY_TIME = 1
+PROXY_DIC = defaultdict(int)
+MAX_PROXY_FAIL_TIME = 15
 
 
 class Comment(object):
@@ -52,7 +56,7 @@ class Comment(object):
         self.build_random_headers(music_id)
 
         r = requests.post('http://music.163.com/weapi/v1/resource/comments/R_SO_4_' + str(music_id),
-                          headers=self.headers, params=self.params, data=self.data)
+                          headers=self.headers, params=self.params, data=self.data, timeout=1)
         resp = r.json()
 
         # save data
@@ -74,9 +78,6 @@ class Comment(object):
         # self.headers['Cookie'] = cookie_fmt.format(now=now, sid=sid, nid=nid)
         # self.headers['User-Agent'] = ua_mw.get_rand_ua()
 
-        # self.headers[
-        #     'Cookie'] = 'MUSIC_U=e954e2600e0c1ecfadbd06b365a3950f2fbcf4e9ffcf7e2733a8dda4202263671b4513c5c9ddb66f1b44c7a29488a6fff4ade6dff45127b3e9fc49f25c8de500d8f960110ee0022abf122d59fa1ed6a2'
-
     def save_proxy_api_comment(self, music_id):
         ok = False
 
@@ -84,34 +85,70 @@ class Comment(object):
             proxy = random_proxy.get_random_proxy()
             try:
                 self.save_api_comment(music_id, proxy)
+                # self.save_api_comment_sample(music_id, proxy)
                 self.success += 1
                 ok = True
                 break
             except Exception as e:
+                logging.info('exception: {}'.format(e))
+                # 增加一次这个的失败
+                PROXY_DIC[proxy] += 1
+                # 如果失败大于3次，把该ip移除
+                if PROXY_DIC[proxy] >= MAX_PROXY_FAIL_TIME:
+                    # random_proxy.remove_proxy(proxy)
+                    pass
                 continue
 
         if not ok:
             self.failed += 1
             logging.error('spider id err: {}'.format(music_id))
 
+    def save_cookie_api_comment(self, music_id):
+        ok = False
+
+        try:
+            self.save_api_comment(music_id, "")
+            self.success += 1
+            ok = True
+        except Exception as e:
+            logging.info('exception: {}'.format(e))
+
+        if not ok:
+            self.failed += 1
+            logging.error('spider id err: {}'.format(music_id))
+
+    def save_api_comment_sample(self, music_id, proxy):
+        i = random.randint(0, 9)
+        if i < 1:
+            # if i < 9:
+            raise ValueError(music_id)
+
     def save_api_comment(self, music_id, proxy):
         self.build_random_headers(music_id)
 
         # logging.info("use header: {}".format(self.headers))
 
-        proxies = {
-            'http': proxy
-        }
+        # 默认添加cookie
+        # self.headers['Cookie'] = random_proxy.get_random_cookie()
 
-        r = requests.post('http://music.163.com/api/v1/resource/comments/R_SO_4_' + str(music_id),
-                          headers=self.headers, proxies=proxies, timeout=0.5)
+        # 伪造访问的ip地址
+        self.headers = {'X-Real-IP': random_proxy.get_random_ip()}
+
+        if proxy:
+            proxies = {'http': proxy}
+            r = requests.post('http://music.163.com/api/v1/resource/comments/R_SO_4_' + str(music_id),
+                              headers=self.headers, proxies=proxies, timeout=2)
+        else:
+            r = requests.post('http://music.163.com/api/v1/resource/comments/R_SO_4_' + str(music_id),
+                              headers=self.headers, timeout=2)
+
         resp = r.json()
 
         if 'total' in resp:
             sql.insert_comments(music_id, resp['total'])
         else:
             logging.error('spider [{}] failed: {}'.format(music_id, resp))
-            raise ValueError(music_id)
+            raise ValueError('{}: {}'.format(music_id, proxy))
 
     def build_comments(self, dic):
         comments = dic.get('hotComments', [])
@@ -125,6 +162,7 @@ class MultiComment(threadpool.MultiRun):
 
     def run_one(self, dic):
         self.my_comment.save_proxy_api_comment(dic['id'])
+        # self.my_comment.save_cookie_api_comment(dic['id'])
         return dic
 
     def check_block(self):

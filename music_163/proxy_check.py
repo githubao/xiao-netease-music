@@ -12,13 +12,16 @@ from xconcurrent import threadpool
 import requests
 import logging
 from collections import defaultdict
+from music_163 import random_proxy
 
 outfile = 'proxies_ok.txt'
 TRY_TIME = 5
 
 
 class Proxy:
-    results = []
+
+    def __init__(self):
+        self.results = []
 
     def check(self, proxy):
         proxies = {
@@ -27,7 +30,11 @@ class Proxy:
 
         url = 'http://music.163.com/api/v1/resource/comments/R_SO_4_440208476'
 
-        r = requests.post(url, proxies=proxies, timeout=0.5)
+        headers = {
+            'Cookie': random_proxy.get_random_cookie()
+        }
+
+        r = requests.post(url, proxies=proxies, headers=headers, timeout=2)
         resp = r.json()
 
         if 'total' in resp:
@@ -40,7 +47,10 @@ class Proxy:
 
 
 class MultiComment(threadpool.MultiRun):
-    proxy = Proxy()
+
+    def __init__(self, tasks):
+        super().__init__(tasks)
+        self.proxy = Proxy()
 
     def run_one(self, dic):
         try:
@@ -81,27 +91,5 @@ def many_multi_check():
         logging.info('process time complete: {}'.format(i + 1))
 
 
-def count_sum():
-    dic = defaultdict(int)
-
-    with open(outfile, 'r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-
-            dic[line] += 1
-
-    sorted_list = sorted(dic.items(), key=lambda x: x[1], reverse=True)
-
-    for item, count in sorted_list:
-        # print(item, count)
-        pass
-    for item, count in sorted_list:
-        if count <= 5:
-            break
-
-        print(item)
-
-
 if __name__ == '__main__':
-    # many_multi_check()
-    count_sum()
+    many_multi_check()

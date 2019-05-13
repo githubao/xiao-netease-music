@@ -7,6 +7,14 @@ copy from: https://github.com/RitterHou/music-163
 
 这是一个爬取网易云音乐的所有的歌曲的评论数的爬虫。
 
+### some tips
+研究了代理池，随机cookie，最后发现在header里面加上一个随机的X-Real-IP字段: 
+```python
+from music_163 import random_proxy
+headers = {'X-Real-IP': random_proxy.get_random_ip()}
+```
+就能够避免{"code": -460, "msg": "Cheating"}的错误了...累觉不爱
+
 ### 以下为主要思路
 1. 爬取所有的歌手信息（[artists.py](music_163/artists.py)）；
 2. 根据上一步爬取到的歌手信息去爬取所有的专辑信息（[album_by_artist.py](music_163/album_by_artist.py)）；

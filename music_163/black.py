@@ -8,9 +8,13 @@
 @time: 2019-05-13 14:57
 """
 
+import json
+from collections import defaultdict
+
 black_file = 'black.txt'
 fresh_file = 'fresh.txt'
 proxy_file = 'proxies.txt'
+out_file = 'proxies_ok.txt'
 
 
 def dup():
@@ -38,6 +42,28 @@ def dup2():
             fw.write('{}\n'.format(item))
 
 
+def count_sum():
+    dic = defaultdict(int)
+
+    with open(out_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+
+            dic[line] += 1
+
+    sorted_list = sorted(dic.items(), key=lambda x: x[1], reverse=True)
+
+    for item, count in sorted_list:
+        print(item, count)
+        pass
+    for item, count in sorted_list:
+        if count <= 2:
+            break
+
+        print(item)
+
+
 if __name__ == '__main__':
     # dup()
-    dup2()
+    # dup2()
+    count_sum()

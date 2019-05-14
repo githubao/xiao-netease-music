@@ -30,8 +30,12 @@ http://music.163.com/discover/artist/cat?id=1001&initial=90
 http://music.163.com/artist/album?id=6452
 1. music_by_album.py: 去重之后有(2856051)首歌曲
 http://music.163.com/album?id=18877
-1. comments_by_music.py: 去重之后有()条评论
+1. comments_by_music.py: 去重之后有(2856043)条评论
 https://music.163.com/#/song?id=185709
+
+### 收藏歌单
+1. 评论大于5W的歌曲:  https://music.163.com/#/playlist?id=2792146274
+1. 评论大于10W的歌曲: https://music.163.com/#/playlist?id=2792159323
 
 ### 代理ip
 1. https://proxy.rudnkh.me/txt
